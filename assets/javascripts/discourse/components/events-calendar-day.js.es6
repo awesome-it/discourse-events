@@ -73,6 +73,7 @@ export default Ember.Component.extend({
   },
 
   click() {
+    console.log('click()', this.get('date'), this.get('month'), this);
     const canSelectDate = this.get('canSelectDate');
     if (canSelectDate) {
       const date = this.get('date');
