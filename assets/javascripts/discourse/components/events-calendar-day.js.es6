@@ -76,7 +76,7 @@ export default Ember.Component.extend({
 
   click() {
 
-    const controller = getOwner(this).lookup('controller:composer');
+    const composer = getOwner(this).lookup('controller:composer');
     composer.open({
       action: CREATE_TOPIC,
       draftKey: DRAFT,
