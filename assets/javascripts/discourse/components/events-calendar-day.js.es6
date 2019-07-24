@@ -73,7 +73,12 @@ export default Ember.Component.extend({
   },
 
   click() {
+
     console.log('click()', this.get('date'), this.get('month'), this);
+    const Composer = require('discourse/models/composer').default;
+    const composerController = Discourse.__container__.lookup('controller:composer');
+    composerController.open({ action: Composer.CREATE_TOPIC, draftKey: Composer.DRAFT });
+
     const canSelectDate = this.get('canSelectDate');
     if (canSelectDate) {
       const date = this.get('date');
