@@ -1,7 +1,7 @@
 import { default as computed, on, observes } from 'ember-addons/ember-computed-decorators';
 import { eventsForDay } from '../lib/date-utilities';
 import { withPluginApi } from 'discourse/lib/plugin-api';
-import { Composer } from 'discourse/models/composer';
+import { CREATE_TOPIC, DRAFT } from 'discourse/models/composer';
 
 const MAX_EVENTS = 4;
 
@@ -78,8 +78,8 @@ export default Ember.Component.extend({
 
     withPluginApi('0.8', api => {
       api.modifyClass('controller:composer', {
-        action: Composer.CREATE_TOPIC,
-        draftKey: Composer.DRAFT
+        action: CREATE_TOPIC,
+        draftKey: DRAFT
       });
     });
 
