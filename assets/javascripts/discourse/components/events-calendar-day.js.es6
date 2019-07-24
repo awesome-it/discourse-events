@@ -78,10 +78,10 @@ export default Ember.Component.extend({
 
     const controller = getOwner(this).lookup('controller:composer');
     composer.open({
-        action: CREATE_TOPIC,
-        draftKey: DRAFT,
-        title: "Pre-filled topic title!",
-        topicBody: "Pre-filled topic body goes here"
+      action: CREATE_TOPIC,
+      draftKey: DRAFT,
+      title: "Pre-filled topic title!",
+      topicBody: "Pre-filled topic body goes here"
     });
 
     const canSelectDate = this.get('canSelectDate');
