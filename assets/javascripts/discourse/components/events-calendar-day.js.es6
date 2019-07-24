@@ -1,6 +1,6 @@
 import { default as computed, on, observes } from 'ember-addons/ember-computed-decorators';
 import { eventsForDay } from '../lib/date-utilities';
-import { withPluginApi } from 'discourse/lib/plugin-api';
+import { getOwner } from 'discourse-common/lib/get-owner';
 import { CREATE_TOPIC, DRAFT } from 'discourse/models/composer';
 
 const MAX_EVENTS = 4;
@@ -76,11 +76,12 @@ export default Ember.Component.extend({
 
   click() {
 
-    withPluginApi('0.8', api => {
-      api.modifyClass('controller:composer', {
+    const controller = getOwner(this).lookup('controller:composer');
+    composer.open({
         action: CREATE_TOPIC,
-        draftKey: DRAFT
-      });
+        draftKey: DRAFT,
+        title: "Pre-filled topic title!",
+        topicBody: "Pre-filled topic body goes here"
     });
 
     const canSelectDate = this.get('canSelectDate');
