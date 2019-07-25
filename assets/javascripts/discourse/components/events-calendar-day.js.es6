@@ -1,7 +1,7 @@
 import { default as computed, on, observes } from 'ember-addons/ember-computed-decorators';
 import { eventsForDay } from '../lib/date-utilities';
 import { getOwner } from 'discourse-common/lib/get-owner';
-import { Composer } from 'discourse/models/composer';
+import { default as Composer } from 'discourse/models/composer';
 
 const MAX_EVENTS = 4;
 
