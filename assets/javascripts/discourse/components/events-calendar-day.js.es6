@@ -84,7 +84,8 @@ export default Ember.Component.extend({
       topicBody: "Pre-filled topic body goes here"
     });
 
-    console.log(this.get('category_id'), this);
+    console.log(this.get('category_id'), this.get('buffered.category_id'));
+    //Category.findById(this.get('buffered.category_id')
 
     const canSelectDate = this.get('canSelectDate');
     if (canSelectDate) {
