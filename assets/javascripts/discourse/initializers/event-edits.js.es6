@@ -210,9 +210,6 @@ export default {
 
         renderTemplate(controller, model) {
           // respect discourse-layouts settings
-          const global = siteSettings.layouts_list_navigation_disabled_global;
-          const catGlobal = model.category && model.category.get('layouts_list_navigation_disabled_global');
-console.log("renderTemplate", catGlobal, global);
           if (!global && !catGlobal) {
             if (this.routeName.indexOf('Category') > -1) {
               this.render('navigation/category', { outlet: 'navigation-bar' });
@@ -237,7 +234,6 @@ console.log("renderTemplate", catGlobal, global);
           afterModel(model, transition) {
             const filter = this.filter(model.category);
             if (filter === 'calendar' || filter === 'agenda') {
-console.log("replaceWith", model, model.category);
               return this.replaceWith(`/c/${Discourse.Category.slugFor(model.category)}/l/${this.filter(model.category)}`);
             } else {
               return this._super(...arguments);
