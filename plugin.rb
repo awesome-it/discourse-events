@@ -570,15 +570,15 @@ after_initialize do
 
   Rails.configuration.paths['app/views'].unshift(Rails.root.join('plugins', 'discourse-events', 'app/views'))
 
-  module UserNotificationsEventExtension
-    protected def send_notification_email(opts)
-      post = opts[:post]
-      if post && post.topic.event
-        @event = post.topic.event
-      end
-      super(opts)
-    end
-  end
+  #module UserNotificationsEventExtension
+  #  protected def send_notification_email(opts)
+  #    post = opts[:post]
+  #    if post && post.topic.event
+  #      @event = post.topic.event
+  #    end
+  #    super(opts)
+  #  end
+  #end
 
   module InviteMailerEventExtension
     def send_invite(invite)
@@ -599,12 +599,12 @@ after_initialize do
     end
   end
 
-  require_dependency 'user_notifications'
-  class ::UserNotifications
-    # Disable to fix https://meta.discourse.org/t/most-email-notifications-not-being-sent-due-to-events-plugin/125791/6
-    #prepend UserNotificationsEventExtension
-    prepend BuildEmailHelperExtension
-  end
+  # Disable to fix https://meta.discourse.org/t/most-email-notifications-not-being-sent-due-to-events-plugin/125791/6
+  #require_dependency 'user_notifications'
+  #class ::UserNotifications
+  #  prepend UserNotificationsEventExtension
+  #  prepend BuildEmailHelperExtension
+  #end
 
   require_dependency 'invite_mailer'
   class ::InviteMailer
@@ -702,17 +702,17 @@ after_initialize do
     prepend MessageBuilderExtension
   end
 
-  class UserNotifications::UserNotificationRenderer
-    def localized_event(event)
-      if event
-        @event ||= CalendarEvents::Helper.localize_event(event)
-      else
-        nil
-      end
-    end
-
-    def timezone_label(event)
-      CalendarEvents::Helper.timezone_label(event)
-    end
-  end
+  #class UserNotifications::UserNotificationRenderer
+  #  def localized_event(event)
+  #    if event
+  #      @event ||= CalendarEvents::Helper.localize_event(event)
+  #    else
+  #      nil
+  #    end
+  #  end
+  #
+  #  def timezone_label(event)
+  #    CalendarEvents::Helper.timezone_label(event)
+  #  end
+  #end
 end
