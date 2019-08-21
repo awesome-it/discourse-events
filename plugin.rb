@@ -601,7 +601,8 @@ after_initialize do
 
   require_dependency 'user_notifications'
   class ::UserNotifications
-    prepend UserNotificationsEventExtension
+    # Disable to fix https://meta.discourse.org/t/most-email-notifications-not-being-sent-due-to-events-plugin/125791/6
+    #prepend UserNotificationsEventExtension
     prepend BuildEmailHelperExtension
   end
 
