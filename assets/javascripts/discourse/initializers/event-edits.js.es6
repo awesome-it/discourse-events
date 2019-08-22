@@ -95,12 +95,13 @@ export default {
         if (category) {
           items = items.reject((item) => item.name === 'agenda' || item.name === 'calendar');
 
-          if (category.events_agenda_enabled) {
+          if (category.events_agenda_enabled || category.custom_fields.events_agenda_enabled) {
             items.push(Discourse.NavItem.fromText('agenda', args));
           }
-          if (category.events_calendar_enabled) {
+          if (true || category.events_calendar_enabled || category.custom_fields.events_calendar_enabled) {
             items.push(Discourse.NavItem.fromText('calendar', args));
           }
+
         }
 
         return items;
