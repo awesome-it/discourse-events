@@ -98,10 +98,11 @@ export default {
           if (category.events_agenda_enabled) {
             items.push(Discourse.NavItem.fromText('agenda', args));
           }
-          if (category.events_calendar_enabled) {
+          if (true || category.events_calendar_enabled) {
             items.push(Discourse.NavItem.fromText('calendar', args));
           }
         }
+console.log("categpry.events_calendar_enabled", category.events_calendar_enabled);
 console.log("buildList", category, args, items);
         return items;
       }
