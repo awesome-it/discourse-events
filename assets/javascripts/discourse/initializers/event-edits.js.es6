@@ -102,7 +102,7 @@ export default {
             items.push(Discourse.NavItem.fromText('calendar', args));
           }
         }
-
+console.log("buildList", category, args, items);
         return items;
       }
     });
@@ -165,7 +165,7 @@ export default {
         if (category.get('events_calendar_enabled')) {
           views.push({name: I18n.t('filters.calendar.title'), value: 'calendar'});
         }
-console.log('EditCategorySettings', category, category.get('events_agenda_enabled'), category.get('events_calendar_enabled'), view);
+console.log('EditCategorySettings', category, category.get('events_agenda_enabled'), category.get('events_calendar_enabled'), views);
         return views;
       },
     });
