@@ -552,6 +552,32 @@ after_initialize do
     end
   end
 
+  on(:approved_post) do |reviewable, post|
+    event = reviewable.payload['event']
+    if (
+    event.present? &&
+      event['event_start'].present? &&
+      event['event_start'].is_a?(Numeric) &&
+      event['event_start'] != 0
+    )
+
+      topic = post.topic
+      event.each do |k,v|
+        topic.custom_fields[k] = v
+      end
+
+      topic.save_custom_fields(true)
+    end
+  end
+
+  NewPostManager.add_handler(1) do |manager|
+    if manager.args['event'] && NewPostManager.post_needs_approval?(manager) && NewPostManager.is_first_post?(manager)
+      NewPostManager.add_plugin_payload_attribute('event') if NewPostManager.respond_to?(:add_plugin_payload_attribute)
+    end
+
+    nil
+  end
+
   Discourse::Application.routes.prepend do
     get "calendar.ics" => "list#calendar_ics", format: :ics, protocol: :webcal
     get "agenda.ics" => "list#agenda_ics", format: :ics, protocol: :webcal
@@ -566,152 +592,5 @@ after_initialize do
     get "c/:parent_category/:category/l/agenda.rss" => "list#agenda_feed", format: :rss
 
     mount ::CalendarEvents::Engine, at: '/calendar-events'
-  end
-
-  Rails.configuration.paths['app/views'].unshift(Rails.root.join('plugins', 'discourse-events', 'app/views'))
-
-  module UserNotificationsEventExtension
-    protected def send_notification_email(opts)
-      post = opts[:post]
-      if post && post.topic.event
-        @event = post.topic.event
-      end
-      super(opts)
-    end
-  end
-
-  module InviteMailerEventExtension
-    def send_invite(invite)
-      topic = invite.topics.order(:created_at).first
-      if topic && topic.event
-        @event = topic.event
-      end
-      super(invite)
-    end
-  end
-
-  module BuildEmailHelperExtension
-    def build_email(*builder_args)
-      if builder_args[1] && @event
-        builder_args[1][:event] = @event
-      end
-      super(*builder_args)
-    end
-  end
-
-  require_dependency 'user_notifications'
-  class ::UserNotifications
-    prepend UserNotificationsEventExtension
-    prepend BuildEmailHelperExtension
-  end
-
-  require_dependency 'invite_mailer'
-  class ::InviteMailer
-    prepend InviteMailerEventExtension
-    prepend BuildEmailHelperExtension
-  end
-
-  module MessageBuilderExtension
-    def html_part
-      if @opts[:event] && invite_template
-        event_str = build_event_string
-        event_html = "<div style='padding-left:1em;'>#{event_str}</div>"
-
-        if html = @opts[:html_override]
-          html = substitute_topic_type(@opts[:html_override])
-
-          doc = Nokogiri::HTML::fragment(html)
-
-          doc.at_css('blockquote').css("p:eq(1)").after(event_html)
-
-          @opts[:html_override] = doc.to_s
-        else
-          doc = Nokogiri::HTML::fragment(PrettyText.cook(body))
-          doc.at_css('blockquote:eq(1) p:eq(2)').replace(event_html)
-          @opts[:html_override] = doc.to_s
-        end
-      end
-
-      super
-    end
-
-    def body
-      body = super
-
-      if @opts[:event]
-        event_str = build_event_string
-
-        if invite_template
-          body = substitute_topic_type(body)
-
-          pre_str, post_str = body.slice!(0...(body.rindex('*') + 1)), body
-
-          body = "#{pre_str}\n>\n> #{event_str}\n#{post_str}"
-        else
-          body = "#{event_str}\n\n#{body}"
-        end
-      end
-
-      body
-    end
-
-    def invite_template
-      invite_notification || invite_mailer
-    end
-
-    def invite_notification
-      @opts[:template] === "user_notifications.user_invited_to_topic"
-    end
-
-    def invite_mailer
-      @opts[:template] === "invite_mailer" || @opts[:template] === "custom_invite_mailer"
-    end
-
-    def build_event_string
-      event = @opts[:event]
-
-      return '' if !event
-
-      localized_event = CalendarEvents::Helper.localize_event(event)
-
-      event_str = "&#128197; #{I18n.l(localized_event[:start], format: localized_event[:format])}"
-
-      if localized_event[:end]
-        event_str << " — #{I18n.l(localized_event[:end], format: localized_event[:format])}"
-      end
-
-      if localized_event[:timezone] && SiteSetting.events_timezone_include_in_email
-        event_str << " #{CalendarEvents::Helper.timezone_label(localized_event)}"
-      end
-
-      event_str
-    end
-
-    def substitute_topic_type(text)
-      topic_type_match = Regexp.new("#{I18n.t('event_email.topic_type_match')}")
-      topic_type_sub = I18n.t('event_email.topic_type_sub')
-
-      text.gsub!(topic_type_match, topic_type_sub)
-
-      text
-    end
-  end
-
-  class Email::MessageBuilder
-    prepend MessageBuilderExtension
-  end
-
-  class UserNotifications::UserNotificationRenderer
-    def localized_event(event)
-      if event
-        @event ||= CalendarEvents::Helper.localize_event(event)
-      else
-        nil
-      end
-    end
-
-    def timezone_label(event)
-      CalendarEvents::Helper.timezone_label(event)
-    end
   end
 end
