@@ -98,7 +98,7 @@ export default {
           if (category.events_agenda_enabled || category.custom_fields && category.custom_fields.events_agenda_enabled) {
             items.push(Discourse.NavItem.fromText('agenda', args));
           }
-          if (true || category.events_calendar_enabled || category.custom_fields && category.custom_fields.events_calendar_enabled) {
+          if (category.events_calendar_enabled || category.custom_fields && category.custom_fields.events_calendar_enabled) {
             items.push(Discourse.NavItem.fromText('calendar', args));
           }
 
