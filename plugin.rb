@@ -69,12 +69,12 @@ after_initialize do
       add_choices(name) if name == :top_menu
       super
     end
-    
+
     def validate_value(name, type, val)
       add_choices(name) if name == :top_menu
       super
     end
-    
+
     def add_choices(name)
       @choices[name].push("agenda") if @choices[name].exclude?("agenda")
       @choices[name].push("calendar") if @choices[name].exclude?("calendar")
@@ -187,7 +187,7 @@ after_initialize do
   add_to_serializer(:current_user, :calendar_first_day_week) { object.custom_fields['calendar_first_day_week'] }
   register_editable_user_custom_field :calendar_first_day_week if defined? register_editable_user_custom_field
 
-  UserApiKey::SCOPES.reverse_merge!(
+  UserApiKeyScope::SCOPES.reverse_merge!(
     CalendarEvents::USER_API_KEY_SCOPE.to_sym => [
       [:get, 'list#calendar_ics'],
       [:get, 'list#agenda_ics'],
@@ -259,7 +259,7 @@ after_initialize do
     get "calendar.ics" => "list#calendar_ics", format: :ics, protocol: :webcal
     get "calendar.rss" => "list#calendar_feed", format: :rss
     get "agenda.rss" => "list#agenda_feed", format: :rss
-    
+
     %w{users u}.each do |root_path|
       get "#{root_path}/:username/preferences/webcal-keys" => "users#preferences", constraints: { username: RouteFormat.username }
     end
@@ -292,7 +292,7 @@ on(:custom_wizard_ready) do
   if defined?(CustomWizard) == 'constant' &&
     CustomWizard.class == Module &&
     defined?(CustomWizard::FieldSerializer) == 'constant'
-    
+
     CustomWizard::Field.add_assets('event', 'discourse-events', ['components', 'templates', 'lib'])
     add_to_serializer(CustomWizard::Field, :event_timezones) { EventsTimezoneDefaultSiteSetting.values if object.type === 'event'}
   end
@@ -301,7 +301,7 @@ end
 on(:user_destroyed) do |user|
   user_id = user.id
   topic_ids = TopicCustomField.where(name: 'event_going').pluck(:topic_id)
-  topics = Topic.find(topic_ids) if topic_ids
+  topics = Topic.where(id: topic_ids) if topic_ids.present?
 
   if topics
     topics.each do |topic|
