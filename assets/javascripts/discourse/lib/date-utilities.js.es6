@@ -517,7 +517,13 @@ function eventsForDay(day, topics, args = {}) {
 
       if (!allDay && (!multiDay || startIsSame)) {
         const timeFormat = args.siteSettings.events_event_time_calendar_format;
-        attrs["time"] = start.format(timeFormat);
+        if (!end) {
+          attrs["time"] = start.format(timeFormat);
+        }
+        else {
+          attrs["time"] = start.format(timeFormat) + " - " + end.format(timeFormat);
+        }
+
       }
 
       if (startIsSame || fullWidth || args.rowIndex === 0) {
@@ -529,7 +535,11 @@ function eventsForDay(day, topics, args = {}) {
             daysLeft >= remainingInRow ? remainingInRow : daysLeft;
           let buffer = 20;
           if (attrs["time"]) {
-            buffer += 55;
+            if (!end) {
+              buffer += 55;
+            } else {
+              buffer += 113;
+            }
           }
           let tStyle = `width:calc((100%*${daysInRow}) - ${buffer}px);background-color:#${topic.category.color};`;
           attrs["titleStyle"] = htmlSafe(tStyle);
