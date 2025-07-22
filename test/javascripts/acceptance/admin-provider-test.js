@@ -1,25 +1,46 @@
-import selectKit from "discourse/tests/helpers/select-kit-helper";
-import { acceptance, exists } from "discourse/tests/helpers/qunit-helpers";
-import { test } from "qunit";
 import { visit } from "@ember/test-helpers";
-import { registerRoutes } from "../helpers/events-routes";
+import { test } from "qunit";
+import {
+  acceptance,
+  exists,
+  query,
+} from "discourse/tests/helpers/qunit-helpers";
+import { default as Subscriptions } from "../fixtures/subscription-fixtures";
+import { default as Suppliers } from "../fixtures/supplier-fixtures";
 
 function providerRoutes(needs) {
   needs.pretender((server, helper) => {
-    server.get("/admin/events", () => {
+    server.get("/admin/plugins/events/subscription", () => {
+      return helper.response(Subscriptions["business"]);
+    });
+    server.get("/admin/plugins/subscription-client/suppliers", () => {
+      return helper.response(Suppliers["authorized"]);
+    });
+    server.get("/admin/plugins/events", () => {
       return helper.response({});
     });
-    server.get("/admin/events/provider", () => {
+    server.get("/admin/plugins/events/provider", () => {
       return helper.response({
         providers: [
           {
             id: 1,
             name: "my_provider",
+            provider_type: "icalendar",
+          },
+          {
+            id: 2,
+            name: "my_google_provider",
+            provider_type: "google",
+          },
+          {
+            id: 3,
+            name: "my_outlook_provider",
+            provider_type: "outlook",
           },
         ],
       });
     });
-    server.put("/admin/events/provider/new", () => {
+    server.put("/admin/plugins/events/provider/new", () => {
       return helper.response({
         provider: {
           id: 2,
@@ -29,7 +50,7 @@ function providerRoutes(needs) {
         },
       });
     });
-    server.put("/admin/events/provider/:id", () => {
+    server.put("/admin/plugins/events/provider/:id", () => {
       return helper.response({
         provider: {
           id: 1,
@@ -39,7 +60,7 @@ function providerRoutes(needs) {
         },
       });
     });
-    server.delete("/admin/events/provider/:id", () => {
+    server.delete("/admin/plugins/events/provider/:id", () => {
       return helper.response({ success: "OK" });
     });
   });
@@ -49,86 +70,37 @@ acceptance("Events | Provider", function (needs) {
   needs.user();
   needs.settings({ events_enabled: true });
 
-  registerRoutes(needs);
   providerRoutes(needs);
 
   test("Displays the provider admin", async (assert) => {
-    await visit("/admin/events/provider");
+    await visit("/admin/plugins/events/provider");
 
     assert.ok(exists(".events.provider"), "it shows the provider route");
 
     assert.equal(
-      find(".admin-events-controls h2").eq(0).text().trim(),
+      query(".admin-events-controls h2").innerText.trim(),
       "Providers",
       "title displayed"
     );
   });
 
-  test("Add provider works", async (assert) => {
-    await visit("/admin/events/provider");
-
-    await click("#add-provider");
-
-    assert.ok(
-      exists("tr[data-provider-id=new]"),
-      "it displays a new provider row"
-    );
-    assert.ok(
-      find("tr[data-provider-id=new] .save-provider").prop("disabled"),
-      "it disables the save button"
-    );
-
-    await fillIn("tr[data-provider-id=new] .provider-name", "my_provider");
-
-    assert.ok(
-      find("tr[data-provider-id=new] .save-provider").prop("disabled") ===
-        false,
-      "it enables the save button"
-    );
-
-    await click("tr[data-provider-id=new] .save-provider");
-  });
-
-  test("Edit provider works", async (assert) => {
-    await visit("/admin/events/provider");
-
-    await fillIn(
-      "tr[data-provider-id=1] .provider-name",
-      "my_updated_provider"
-    );
-
-    assert.ok(
-      find("tr[data-provider-id=1] .save-provider").prop("disabled") === false,
-      "it enables the save button"
-    );
-
-    await click(".save-provider");
-  });
-
   test("Appropriate credential controls show for different provider types", async (assert) => {
-    await visit("/admin/events/provider");
+    await visit("/admin/plugins/events/provider");
 
-    assert.ok(
-      find(".credentials-container").eq(0).text().trim(),
-      "No Credentials",
+    assert.equal(
+      query(
+        "tr[data-provider-id='1'] .events-provider-authentication"
+      ).innerText.trim(),
+      "No Authentication",
       "no credentials displayed"
     );
 
-    await selectKit(".provider-type").expand();
-    await selectKit(".provider-type").selectRowByValue("icalendar");
-
     assert.ok(
-      find("tr[data-provider-id=1] .credentials-container").eq(0).text().trim(),
-      "No Credentials",
-      "no credentials displayed"
+      exists(".events-provider-credentials input.client-id"),
+      "it displays the client id input"
     );
-
-    await selectKit(".provider-type").expand();
-    await selectKit(".provider-type").selectRowByValue("eventbrite");
-
-    assert.ok(exists("input.token"), "it displays the token input");
     assert.ok(
-      exists(".btn.toggle-secret-visibility"),
+      exists(".events-provider-credentials .btn.toggle-secret-visibility"),
       "it displays the secret visibility toggle"
     );
   });

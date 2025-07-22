@@ -1,14 +1,25 @@
-import { acceptance, exists } from "discourse/tests/helpers/qunit-helpers";
-import { test } from "qunit";
 import { visit } from "@ember/test-helpers";
-import { registerRoutes } from "../helpers/events-routes";
+import { test } from "qunit";
+import {
+  acceptance,
+  exists,
+  query,
+} from "discourse/tests/helpers/qunit-helpers";
+import { default as Subscriptions } from "../fixtures/subscription-fixtures";
+import { default as Suppliers } from "../fixtures/supplier-fixtures";
 
 function sourceRoutes(needs) {
   needs.pretender((server, helper) => {
-    server.get("/admin/events", () => {
+    server.get("/admin/plugins/events/subscription", () => {
+      return helper.response(Subscriptions["business"]);
+    });
+    server.get("/admin/plugins/subscription-client/suppliers", () => {
+      return helper.response(Suppliers["authorized"]);
+    });
+    server.get("/admin/plugins/events", () => {
       return helper.response({});
     });
-    server.get("/admin/events/log", () => {
+    server.get("/admin/plugins/events/log", () => {
       return helper.response({
         logs: [
           {
@@ -23,7 +34,7 @@ function sourceRoutes(needs) {
         page: 1,
       });
     });
-    server.delete("/admin/events/log", () => {
+    server.delete("/admin/plugins/events/log", () => {
       return helper.response({ success: "OK" });
     });
   });
@@ -33,22 +44,21 @@ acceptance("Events | log", function (needs) {
   needs.user();
   needs.settings({ events_enabled: true });
 
-  registerRoutes(needs);
   sourceRoutes(needs);
 
   test("Displays the log admin", async (assert) => {
-    await visit("/admin/events/log");
+    await visit("/admin/plugins/events/log");
 
     assert.ok(exists(".events.log"), "it shows the log route");
 
     assert.equal(
-      find(".admin-events-controls h2").eq(0).text().trim(),
+      query(".admin-events-controls h2").innerText.trim(),
       "Logs",
       "title displayed"
     );
 
     assert.equal(
-      find("td.log-level").eq(0).text().trim(),
+      query(".directory-table__cell.log-level").innerText.trim(),
       "info",
       "Log level displayed"
     );

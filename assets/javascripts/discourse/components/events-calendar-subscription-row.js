@@ -1,6 +1,7 @@
-import DropdownSelectBoxRowComponent from "select-kit/components/dropdown-select-box/dropdown-select-box-row";
-import copyText from "discourse/lib/copy-text";
 import { later } from "@ember/runloop";
+import $ from "jquery";
+import copyText from "discourse/lib/copy-text";
+import DropdownSelectBoxRowComponent from "select-kit/components/dropdown-select-box/dropdown-select-box-row";
 
 export default DropdownSelectBoxRowComponent.extend({
   layoutName: "discourse/templates/components/events-calendar-subscription-row",
@@ -14,7 +15,12 @@ export default DropdownSelectBoxRowComponent.extend({
 
     if (copyText(this.item.id, $copyRange[0])) {
       this.set("copiedUrl", true);
-      later(() => this.set("copiedUrl", false), 2000);
+      later(() => {
+        if (!this.element || this.isDestroying || this.isDestroyed) {
+          return;
+        }
+        this.set("copiedUrl", false);
+      }, 2000);
     }
 
     $copyRange.remove();

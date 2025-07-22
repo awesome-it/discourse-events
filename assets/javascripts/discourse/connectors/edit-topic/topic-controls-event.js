@@ -1,7 +1,12 @@
+import { getOwner } from "@ember/application";
 import Category from "discourse/models/category";
 
 export default {
-  setupComponent(attrs, component) {
+  shouldRender(_, ctx) {
+    return ctx.siteSettings.events_enabled;
+  },
+
+  setupComponent(_, component) {
     const buffered = this.get("buffered");
     const user = component.currentUser;
     const showEventControls = (category) => {
@@ -22,5 +27,12 @@ export default {
       let category = Category.findById(this.get("buffered.category_id"));
       component.set("showEventControls", showEventControls(category));
     });
+  },
+
+  actions: {
+    updateEvent(event) {
+      const controller = getOwner(this).lookup("controller:topic");
+      controller.set("buffered.event", event);
+    },
   },
 };

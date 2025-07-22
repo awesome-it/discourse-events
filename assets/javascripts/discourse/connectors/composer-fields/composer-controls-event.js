@@ -1,8 +1,12 @@
-import { getOwner } from "discourse-common/lib/get-owner";
+import { getOwner } from "@ember/application";
 
 export default {
-  setupComponent(attrs, component) {
-    const controller = getOwner(this).lookup("controller:composer");
+  shouldRender(_, ctx) {
+    return ctx.siteSettings.events_enabled;
+  },
+
+  setupComponent(_, component) {
+    const controller = getOwner(this).lookup("service:composer");
     component.set("eventValidation", controller.get("eventValidation"));
     controller.addObserver("eventValidation", () => {
       if (this._state === "destroying") {
@@ -10,5 +14,12 @@ export default {
       }
       component.set("eventValidation", controller.get("eventValidation"));
     });
+  },
+
+  actions: {
+    updateEvent(event) {
+      const controller = getOwner(this).lookup("service:composer");
+      controller.set("model.event", event);
+    },
   },
 };

@@ -1,14 +1,25 @@
-import { acceptance, exists } from "discourse/tests/helpers/qunit-helpers";
-import { test } from "qunit";
 import { visit } from "@ember/test-helpers";
-import { registerRoutes } from "../helpers/events-routes";
+import { test } from "qunit";
+import {
+  acceptance,
+  exists,
+  query,
+} from "discourse/tests/helpers/qunit-helpers";
+import { default as Subscriptions } from "../fixtures/subscription-fixtures";
+import { default as Suppliers } from "../fixtures/supplier-fixtures";
 
 function sourceRoutes(needs) {
   needs.pretender((server, helper) => {
-    server.get("/admin/events", () => {
+    server.get("/admin/plugins/events/subscription", () => {
+      return helper.response(Subscriptions["business"]);
+    });
+    server.get("/admin/plugins/subscription-client/suppliers", () => {
+      return helper.response(Suppliers["authorized"]);
+    });
+    server.get("/admin/plugins/events", () => {
       return helper.response({});
     });
-    server.get("/admin/events/event", () => {
+    server.get("/admin/plugins/events/event", () => {
       return helper.response({
         events: [
           {
@@ -36,10 +47,18 @@ function sourceRoutes(needs) {
             },
           },
         ],
+        providers: [
+          {
+            id: 1,
+            name: "my_provider",
+            provider_type: "google",
+            authenticated: true,
+          },
+        ],
         page: 1,
       });
     });
-    server.delete("/admin/events/event", () => {
+    server.delete("/admin/plugins/events/event", () => {
       return helper.response({ success: "OK" });
     });
   });
@@ -49,22 +68,15 @@ acceptance("Events | Event", function (needs) {
   needs.user();
   needs.settings({ events_enabled: true });
 
-  registerRoutes(needs);
   sourceRoutes(needs);
 
   test("Displays the event admin", async (assert) => {
-    await visit("/admin/events/event");
+    await visit("/admin/plugins/events/event");
 
     assert.ok(exists(".events.event"), "it shows the event route");
 
     assert.equal(
-      find(".admin-events-controls h2").eq(0).text().trim(),
-      "Events",
-      "title displayed"
-    );
-
-    assert.equal(
-      find(".events-event-row .name").eq(0).text().trim(),
+      query(".events-event-row .name").innerText.trim(),
       "La Traviata",
       "Name displayed"
     );

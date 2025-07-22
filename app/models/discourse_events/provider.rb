@@ -4,20 +4,32 @@ module DiscourseEvents
   class Provider < ActiveRecord::Base
     self.table_name = "discourse_events_providers"
 
-    NO_AUTH ||= %w(developer icalendar)
-    TOKEN ||= %w(eventbrite humanitix eventzilla)
-    OAUTH2 ||= %w(meetup)
+    NO_AUTH = %w[developer icalendar].freeze
+    TOKEN = %w[eventbrite humanitix eventzilla].freeze
+    OAUTH2 = %w[meetup outlook google].freeze
     TYPES = NO_AUTH + TOKEN + OAUTH2
 
-    has_many :sources, foreign_key: "provider_id", class_name: "DiscourseEvents::Source", dependent: :destroy
+    has_many :sources,
+             foreign_key: "provider_id",
+             class_name: "DiscourseEvents::Source",
+             dependent: :destroy
 
-    validates :name, uniqueness: true, format: { with: /\A[a-z0-9\_]+\Z/i, message: "%{value} is not a valid name" }
-    validates :provider_type, inclusion: { in: TYPES, message: "%{value} is not a valid provider type" }
+    validates :name,
+              uniqueness: true,
+              format: {
+                with: /\A[a-z0-9\_]+\Z/i,
+                message: "%{value} is not a valid name",
+              }
+    validates :provider_type,
+              inclusion: {
+                in: TYPES,
+                message: "%{value} is not a valid provider type",
+              }
+
+    before_save :normalize_before_save
 
     def options
-      if (TOKEN + OAUTH2).include?(self.provider_type)
-        { token: self.token }
-      end
+      { token: self.token } if (TOKEN + OAUTH2).include?(self.provider_type)
     end
 
     def valid_token?
@@ -76,7 +88,7 @@ module DiscourseEvents
 
     def redirect_uri
       return nil unless oauth2_type?
-      "#{DiscourseEvents.base_url}/admin/events/provider/#{self.id}/redirect"
+      "#{DiscourseEvents.base_url}/admin/plugins/events/provider/redirect"
     end
 
     def request_token(code)
@@ -84,10 +96,19 @@ module DiscourseEvents
     end
 
     def auth
-      @auth ||= begin
-        klass = "DiscourseEvents::Auth::#{self.provider_type.camelize}"
-        return nil unless Module.const_get(klass)
-        klass.constantize.new(self.id)
+      @auth ||=
+        begin
+          klass = "DiscourseEvents::Auth::#{self.provider_type.camelize}"
+          return nil unless Module.const_get(klass)
+          klass.constantize.new(self.id)
+        end
+    end
+
+    def normalize_before_save
+      if oauth2_type? && (self.client_id.blank? || self.client_secret.blank?)
+        self.token = nil
+        self.token_expires_at = nil
+        self.refresh_token = nil
       end
     end
   end
@@ -97,17 +118,19 @@ end
 #
 # Table name: discourse_events_providers
 #
-#  id            :bigint           not null, primary key
-#  name          :string           not null
-#  provider_type :string           not null
-#  username      :string
-#  password      :string
-#  token         :string
-#  client_id     :string
-#  client_secret :string
-#  authenticated :boolean
-#  created_at    :datetime         not null
-#  updated_at    :datetime         not null
+#  id               :bigint           not null, primary key
+#  name             :string           not null
+#  provider_type    :string           not null
+#  url              :string
+#  username         :string
+#  password         :string
+#  token            :string
+#  token_expires_at :datetime
+#  client_id        :string
+#  client_secret    :string
+#  refresh_token    :string
+#  created_at       :datetime         not null
+#  updated_at       :datetime         not null
 #
 # Indexes
 #

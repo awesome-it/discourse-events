@@ -1,12 +1,14 @@
 export default {
-  resource: "admin",
+  resource: "admin.adminPlugins",
+  path: "/plugins",
   map() {
-    this.route("events", { path: "/events" }, function () {
-      this.route("provider", { path: "/provider" });
-      this.route("source", { path: "/source" });
-      this.route("connection", { path: "/connection" });
-      this.route("event", { path: "/event" });
-      this.route("log", { path: "/log" });
+    this.route("events", function () {
+      this.route("event", function () {
+        this.route("connection");
+      });
+      this.route("source");
+      this.route("provider");
+      this.route("log");
     });
   },
 };

@@ -38,6 +38,21 @@
   padding-right: 0;
 }
 
+.add-event-modal .event-form {
+  .date-time-card {
+    width: 100%;
+    padding: 0 0 20px 0;
+  }
+
+  .datetime-controls {
+    flex-direction: column;
+
+    .end-card {
+      border-left: unset;
+    }
+  }
+}
+
 .event-details {
   align-items: center;
 
@@ -61,10 +76,15 @@
   }
 }
 
-.event-date-mobile {
+.topic-event-label {
   display: flex;
   justify-content: space-between;
+  flex-flow: wrap;
   width: 100%;
+
+  .event-label {
+    flex: unset;
+  }
 }
 
 .topic-list-item .date-time-container {

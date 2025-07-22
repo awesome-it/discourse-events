@@ -1,47 +1,30 @@
+import { A } from "@ember/array";
 import Component from "@ember/component";
+import { empty, not, notEmpty } from "@ember/object/computed";
+import { service } from "@ember/service";
+import discourseComputed from "discourse-common/utils/decorators";
+import Filter, { filtersMatch } from "../models/filter";
 import Source from "../models/source";
 import SourceOptions from "../models/source-options";
-import discourseComputed, { observes } from "discourse-common/utils/decorators";
+import EventsFilters from "./modal/events-filters";
 
 const isEqual = function (obj1, obj2) {
   return JSON.stringify(obj1) === JSON.stringify(obj2);
-};
-
-const SOURCE_OPTIONS = {
-  icalendar: [
-    {
-      name: "uri",
-      type: "text",
-      default: "",
-    },
-  ],
-  eventbrite: [
-    {
-      name: "organization_id",
-      type: "number",
-      default: null,
-    },
-  ],
-  humanitix: [],
-  eventzilla: [],
-  meetup: [
-    {
-      name: "group_urlname",
-      type: "text",
-      default: "",
-    },
-  ],
 };
 
 export default Component.extend({
   tagName: "tr",
   classNames: ["events-source-row"],
   attributeBindings: ["source.id:data-source-id"],
-  SourceOptions: [],
+  hasFilters: notEmpty("source.filters"),
+  modal: service(),
+  subscription: service("events-subscription"),
+  removeDisabled: not("subscription.subscribed"),
+  siteSettings: service(),
 
   didReceiveAttrs() {
+    this._super();
     this.set("currentSource", JSON.parse(JSON.stringify(this.source)));
-    this.setSourceOptions();
   },
 
   willDestroyElement() {
@@ -50,31 +33,56 @@ export default Component.extend({
   },
 
   @discourseComputed(
-    "source.name",
+    "source.topic_sync",
     "source.provider_id",
+    "source.import_type",
+    "source.import_period",
     "source.source_options.@each",
-    "source.from_time",
-    "source.to_time"
+    "source.user.username",
+    "source.category_id",
+    "source.client",
+    "source.filters.[]",
+    "source.filters.@each.query_column",
+    "source.filters.@each.query_operator",
+    "source.filters.@each.query_value"
   )
-  sourceChanged(name, providerId, sourceOptions, fromTime, toTime) {
+  sourceChanged(
+    topicSync,
+    providerId,
+    importType,
+    importPeriod,
+    sourceOptions,
+    username,
+    categoryId,
+    client,
+    filters
+  ) {
     const cs = this.currentSource;
     return (
-      cs.name !== name ||
+      cs.topic_sync !== topicSync ||
       cs.provider_id !== providerId ||
+      cs.import_period !== importPeriod ||
       !isEqual(cs.source_options, JSON.parse(JSON.stringify(sourceOptions))) ||
-      cs.from_time !== fromTime ||
-      cs.to_time !== toTime
+      !filtersMatch(filters, cs.filters) ||
+      cs.import_type !== importType ||
+      cs.user?.username !== username ||
+      cs.category_id !== categoryId ||
+      cs.client !== client
     );
   },
 
   @discourseComputed(
     "sourceChanged",
-    "source.name",
     "source.provider_id",
-    "source.source_options.@each"
+    "sourceOptions.@each.value"
   )
-  saveDisabled(sourceChanged, name, providerId, sourceOptions) {
-    return !sourceChanged || !name || !providerId || !sourceOptions;
+  saveDisabled(sourceChanged, providerId, sourceOptions) {
+    return (
+      !sourceChanged ||
+      !providerId ||
+      !sourceOptions ||
+      sourceOptions.some((opt) => !opt.value)
+    );
   },
 
   @discourseComputed("sourceChanged")
@@ -87,14 +95,72 @@ export default Component.extend({
     return importDisabled ? "import-source" : "btn-primary import-source";
   },
 
-  @discourseComputed("sourceChanged", "source.id", "loading")
-  importDisabled(sourceChanged, sourceId, loading) {
-    return sourceChanged || sourceId === "new" || loading;
+  @discourseComputed(
+    "sourceChanged",
+    "source.id",
+    "importing",
+    "saving",
+    "source.ready",
+    "source.canImport",
+    "source.import_type",
+    "subscription.subscribed"
+  )
+  importDisabled(
+    sourceChanged,
+    sourceId,
+    importing,
+    saving,
+    ready,
+    canImport,
+    importType
+  ) {
+    if (
+      !this.subscription.supportsFeatureValue(
+        "source",
+        "import_type",
+        importType
+      )
+    ) {
+      return true;
+    } else {
+      return (
+        sourceChanged ||
+        sourceId === "new" ||
+        importing ||
+        saving ||
+        !ready ||
+        !canImport
+      );
+    }
   },
 
-  @discourseComputed("source.source_options.@each")
-  sourceOptionsMap(source_options) {
-    return this.sourceOptions.map((opt) => {
+  importPeriodDisabled: not("source.canImport"),
+
+  @discourseComputed("source.provider_id")
+  provider(providerId) {
+    return this.providers?.find((p) => p.id === providerId);
+  },
+
+  @discourseComputed("sourceOptionFields", "provider.provider_type")
+  providerSourceOptionFields(sourceOptionFields, providerType) {
+    if (sourceOptionFields) {
+      return sourceOptionFields[providerType];
+    } else {
+      return [];
+    }
+  },
+
+  sourceOptionsDisabled: empty("sourceOptionFields"),
+
+  @discourseComputed(
+    "source.source_options.@each",
+    "providerSourceOptionFields.@each"
+  )
+  sourceOptions(source_options, providerSourceOptionFields) {
+    if (!providerSourceOptionFields) {
+      return [];
+    }
+    return providerSourceOptionFields.map((opt) => {
       return {
         name: opt.name,
         value: source_options[opt.name],
@@ -103,89 +169,160 @@ export default Component.extend({
     });
   },
 
-  resetProvider() {
-    this.get("source").setProperties({
-      provider_id: null,
-      source_options: SourceOptions.create(),
-    });
-    this.set("sourceOptions", []);
+  @discourseComputed("provider.provider_type")
+  allowedImportTypeValues(providerType) {
+    if (providerType === "icalendar") {
+      return ["import"];
+    } else {
+      return null;
+    }
   },
 
-  @observes("source.provider_id")
-  setSourceOptions() {
-    const providerId = this.source.provider_id;
-    const providers = this.providers;
-    const provider = providers.find((p) => p.id === providerId);
+  @discourseComputed("providers.@each.status")
+  allowedProviderTypeValues(providers) {
+    return providers
+      .filter((p) => p.status === "ready")
+      .map((p) => p.provider_type);
+  },
 
-    if (!providers || !provider) {
-      this.resetProvider();
-      return;
+  @discourseComputed(
+    "siteSettings.calendar_enabled",
+    "siteSettings.discourse_post_event_enabled"
+  )
+  allowedClientValues(calendarEnabled, postEventEnabled) {
+    let allowedClients = ["discourse_events"];
+    if (calendarEnabled && postEventEnabled) {
+      allowedClients.push("discourse_calendar");
     }
+    return allowedClients;
+  },
 
-    const sourceOptions = SOURCE_OPTIONS[provider.provider_type];
-    const currentSourceOptions = this.currentSource.source_options || {};
-    const source_options = {};
-
-    sourceOptions.forEach((opt) => {
-      source_options[opt.name] = currentSourceOptions[opt.name] || opt.default;
-    });
-
-    this.set("source.source_options", SourceOptions.create(source_options));
-    this.set("sourceOptions", sourceOptions);
+  @discourseComputed(
+    "sourceChanged",
+    "saving",
+    "syncing",
+    "subscription.subscribed",
+    "source.client",
+    "source.topic_sync",
+    "source.category_id",
+    "source.user.username"
+  )
+  syncTopicsDisabled(
+    sourceChanged,
+    saving,
+    syncing,
+    subscribed,
+    client,
+    topicSync,
+    categoryId,
+    username
+  ) {
+    return (
+      sourceChanged ||
+      saving ||
+      syncing ||
+      !client ||
+      !subscribed ||
+      !this.subscription.supportsFeatureValue("source", "client", client) ||
+      !topicSync ||
+      !categoryId ||
+      !username
+    );
   },
 
   actions: {
-    updateProvider(provider_id) {
-      this.set("source.provider_id", provider_id);
+    openFilters() {
+      this.modal.show(EventsFilters, {
+        model: this.get("source"),
+      });
     },
 
-    updateSourceOptions(source_options, name, event) {
-      source_options.set(name, event.target.value);
+    updateUser(usernames) {
+      const source = this.source;
+      if (!source.user) {
+        source.set("user", {});
+      }
+      source.set("user.username", usernames[0]);
+    },
+
+    updateSourceOptions(name, event) {
+      this.source.source_options.set(name, event.target.value);
+    },
+
+    updateProvider(providerType) {
+      const provider = this.providers?.find(
+        (p) => p.provider_type === providerType
+      );
+      this.set("source.provider_id", provider.id);
     },
 
     saveSource() {
-      const source = JSON.parse(JSON.stringify(this.source));
+      let source = JSON.parse(JSON.stringify(this.source));
 
-      if (!source.name) {
-        return;
+      const supportedOptions = this.sourceOptionFields[
+        this.provider.provider_type
+      ].map((o) => o.name);
+
+      source.source_options = Object.keys(source.source_options)
+        .filter((name) => supportedOptions.includes(name))
+        .reduce((obj, key) => {
+          obj[key] = source.source_options[key];
+          return obj;
+        }, {});
+
+      if (source.import_period === 0) {
+        source.import_period = null;
       }
 
-      this.set("loading", true);
+      if (source.user) {
+        source.username = source.user.username;
+        delete source.user;
+      } else {
+        source.username = null;
+      }
+
+      this.set("saving", true);
 
       Source.update(source)
         .then((result) => {
           if (result) {
+            let source_params = Object.assign(result.source, {
+              source_options: SourceOptions.create(
+                result.source.source_options
+              ),
+            });
+            if (result.source.filters) {
+              source_params.filters = A(
+                result.source.filters.map((f) => {
+                  return Filter.create(f);
+                })
+              );
+            }
             this.setProperties({
               currentSource: result.source,
-              source: Source.create(
-                Object.assign(result.source, {
-                  source_options: SourceOptions.create(
-                    result.source.source_options
-                  ),
-                })
-              ),
+              source: Source.create(source_params),
             });
           } else if (this.currentSource.id !== "new") {
             this.set("source", JSON.parse(JSON.stringify(this.currentSource)));
           }
         })
         .finally(() => {
-          this.set("loading", false);
+          this.set("saving", false);
         });
     },
 
     importSource() {
-      this.set("loading", true);
-      Source.import(this.source)
+      this.set("importing", true);
+      Source.importEvents(this.source)
         .then((result) => {
           if (result.success) {
-            this.setMessage("import_started", "success");
+            this.setMessage("event_import_started", "success");
           } else {
-            this.setMessage("import_failed_to_start", "error");
+            this.setMessage("event_import_failed_to_start", "error");
           }
         })
         .finally(() => {
-          this.set("loading", false);
+          this.set("importing", false);
 
           setTimeout(() => {
             if (!this.isDestroying && !this.isDestroyed) {
@@ -195,11 +332,27 @@ export default Component.extend({
         });
     },
 
-    onChangeTimeRange(range) {
-      this.get("source").setProperties({
-        from_time: range.from,
-        to_time: range.to,
-      });
+    syncTopics() {
+      const source = this.source;
+
+      this.set("syncing", true);
+      Source.syncTopics(source)
+        .then((result) => {
+          if (result.success) {
+            this.setMessage("topic_creation_started", "success");
+          } else {
+            this.setMessage("topic_creation_failed_to_start", "error");
+          }
+        })
+        .finally(() => {
+          this.set("syncing", false);
+
+          setTimeout(() => {
+            if (!this.isDestroying && !this.isDestroyed) {
+              this.setMessage("info", "info");
+            }
+          }, 5000);
+        });
     },
   },
 });

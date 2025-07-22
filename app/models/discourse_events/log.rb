@@ -2,10 +2,10 @@
 
 module DiscourseEvents
   class Log < ActiveRecord::Base
-    self.table_name = 'discourse_events_logs'
+    self.table_name = "discourse_events_logs"
 
-    enum level: [ :info, :error ]
-    enum context: [ :import, :sync, :auth ]
+    enum :level, %i[info error]
+    enum :context, %i[import sync auth publish]
 
     validates :message, presence: true
     validates :level, presence: true
@@ -16,13 +16,10 @@ end
 #
 # Table name: discourse_events_logs
 #
-#  id            :bigint           not null, primary key
-#  log_type      :integer
-#  message       :string
-#  created_at    :datetime         not null
-#  updated_at    :datetime         not null
-#
-# Indexes
-#
-#  index_discourse_events_logs_on_resource  (resource_type,resource_id)
+#  id         :bigint           not null, primary key
+#  level      :integer
+#  context    :integer
+#  message    :string
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
 #

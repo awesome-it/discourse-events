@@ -1,21 +1,21 @@
-import Category from "discourse/models/category";
+import EmberObject from "@ember/object";
+import { scheduleOnce } from "@ember/runloop";
+import $ from "jquery";
+import { withPluginApi } from "discourse/lib/plugin-api";
+import { CREATE_TOPIC } from "discourse/models/composer";
 import {
   default as discourseComputed,
   observes,
-  on,
 } from "discourse-common/utils/decorators";
-import DiscourseURL from "discourse/lib/url";
-import { withPluginApi } from "discourse/lib/plugin-api";
-import { CREATE_TOPIC } from "discourse/models/composer";
-import { bind, scheduleOnce } from "@ember/runloop";
-import EmberObject from "@ember/object";
 import I18n from "I18n";
+import Provider from "../models/provider";
 
 export default {
   name: "events-edits",
   initialize(container) {
-    const siteSettings = container.lookup("site-settings:main");
-    const currentUser = container.lookup("current-user:main");
+    const siteSettings = container.lookup("service:site-settings");
+    const currentUser = container.lookup("service:current-user");
+    container.registry.register("model:provider", Provider);
 
     withPluginApi("1.4.0", (api) => {
       api.serializeToDraft("event");
@@ -29,7 +29,7 @@ export default {
       });
 
       api.modifyClass("model:composer", {
-        pluginId: "events",
+        pluginId: "discourse-events",
 
         @discourseComputed(
           "subtype",
@@ -59,38 +59,37 @@ export default {
       });
 
       api.modifyClass("component:composer-body", {
-        pluginId: "events",
+        pluginId: "discourse-events",
 
         @observes("composer.event")
         resizeWhenEventAdded() {
           this.composerResized();
         },
 
+        showEventControls() {
+          const showControls = this.get("composer.showEventControls");
+          const $container = $(".composer-fields .title-and-category");
+
+          $container.toggleClass("show-event-controls", Boolean(showControls));
+
+          if (showControls) {
+            const $anchor = this.site.mobileView
+              ? $container.find(".title-input")
+              : $container;
+            $(".composer-controls-event").appendTo($anchor);
+          }
+
+          this.composerResized();
+        },
+
         @observes("composer.showEventControls", "composer.composeState")
         applyEventInlineClass() {
-          scheduleOnce("afterRender", this, () => {
-            const showEventControls = this.get("composer.showEventControls");
-            const $container = $(".composer-fields .title-and-category");
-
-            $container.toggleClass(
-              "show-event-controls",
-              Boolean(showEventControls)
-            );
-
-            if (showEventControls) {
-              const $anchor = this.site.mobileView
-                ? $container.find(".title-input")
-                : $container;
-              $(".composer-controls-event").appendTo($anchor);
-            }
-
-            this.composerResized();
-          });
+          scheduleOnce("afterRender", this, this.showEventControls);
         },
       });
 
       api.modifyClass("model:topic", {
-        pluginId: "events",
+        pluginId: "discourse-events",
 
         @discourseComputed(
           "subtype",
@@ -118,11 +117,24 @@ export default {
 
       // necessary because topic-title plugin outlet only recieves model
       api.modifyClass("controller:topic", {
-        pluginId: "events",
+        pluginId: "discourse-events",
 
         @observes("editingTopic")
         setEditingTopicOnModel() {
           this.set("model.editingTopic", this.get("editingTopic"));
+        },
+      });
+
+      api.modifyClass("route:discovery.category", {
+        pluginId: "discourse-events",
+
+        afterModel(model) {
+          if (
+            model.filterType === "calendar" &&
+            this.templateName === "discovery/list"
+          ) {
+            this.templateName = "discovery/calendar";
+          }
         },
       });
 
@@ -162,64 +174,8 @@ export default {
         },
       });
 
-      api.modifyClass("component:topic-list-item", {
-        pluginId: "events",
-
-        @on("didInsertElement")
-        setupEventLink() {
-          scheduleOnce("afterRender", this, () => {
-            $(".event-link", this.element).on(
-              "click",
-              bind(this, this.handleEventLabelClick)
-            );
-          });
-        },
-
-        @on("willDestroyElement")
-        teardownEventLink() {
-          $(".event-link", this.element).off(
-            "click",
-            bind(this, this.handleEventLabelClick)
-          );
-        },
-
-        handleEventLabelClick(e) {
-          e.preventDefault();
-          const topic = this.get("topic");
-          const href = $(e.target).attr("href");
-          this.appEvents.trigger("header:update-topic", topic);
-          DiscourseURL.routeTo(href);
-        },
-
-        @on("didRender")
-        moveElements() {
-          const topic = this.get("topic");
-
-          scheduleOnce("afterRender", () => {
-            const $linkTopLine = $(".link-top-line", this.element);
-            let rowBelowTitle = false;
-
-            if (topic.event && topic.event.rsvp) {
-              $(".topic-list-event-rsvp", this.element).insertAfter(
-                $linkTopLine
-              );
-              rowBelowTitle = true;
-            }
-
-            if (this.siteSettings.events_event_label_short_after_title) {
-              $(".date-time-container", this.element).insertAfter($linkTopLine);
-              rowBelowTitle = true;
-            }
-
-            if (rowBelowTitle) {
-              $(".main-link", this.element).addClass("row-below-title");
-            }
-          });
-        },
-      });
-
       api.modifyClass("component:edit-category-settings", {
-        pluginId: "events",
+        pluginId: "discourse-events",
 
         @discourseComputed("category")
         availableViews(category) {
@@ -244,7 +200,7 @@ export default {
       });
 
       api.modifyClass("controller:preferences/interface", {
-        pluginId: "events",
+        pluginId: "discourse-events",
 
         @discourseComputed("makeThemeDefault")
         saveAttrNames(makeDefault) {
@@ -254,30 +210,10 @@ export default {
         },
       });
 
-      if (siteSettings.events_hamburger_menu_calendar_link) {
-        api.decorateWidget("hamburger-menu:generalLinks", () => {
-          return {
-            route: "discovery.calendar",
-            className: "calendar-link",
-            label: "filters.calendar.title",
-          };
-        });
-      }
-
-      if (siteSettings.events_hamburger_menu_agenda_link) {
-        api.decorateWidget("hamburger-menu:generalLinks", () => {
-          return {
-            route: "discovery.agenda",
-            className: "agenda-link",
-            label: "filters.agenda.title",
-          };
-        });
-      }
-
       const user = api.getCurrentUser();
       if (user && user.admin) {
         api.modifyClass("model:site-setting", {
-          pluginId: "events",
+          pluginId: "discourse-events",
 
           @discourseComputed("valid_values")
           allowsNone() {
@@ -291,7 +227,7 @@ export default {
       }
 
       api.modifyClass("controller:topic", {
-        pluginId: "events",
+        pluginId: "discourse-events",
 
         @observes("model.id")
         subscribeDiscourseEvents() {
@@ -300,19 +236,23 @@ export default {
           this.messageBus.subscribe(
             `/discourse-events/${this.get("model.id")}`,
             (data) => {
-              if (data.current_user_id === currentUser.id) {
-                return;
-              }
-
               switch (data.type) {
                 case "rsvp": {
-                  let prop = Object.keys(data).filter(
-                    (p) => p.indexOf("event") > -1
-                  );
-                  if (prop && prop[0]) {
-                    let key = prop[0].split("_").join(".");
-                    this.set(`model.${key}`, data[prop[0]]);
-                    this.notifyPropertyChange(`model.${prop}`);
+                  if (data.rsvp) {
+                    this.set(
+                      `model.event.${data.rsvp.type}`,
+                      data.rsvp.usernames
+                    );
+
+                    if (this.currentUser) {
+                      const userRsvp = data.rsvp.usernames.includes(
+                        this.currentUser.username
+                      );
+
+                      if (userRsvp) {
+                        this.set("model.event_user", { rsvp: data.rsvp.type });
+                      }
+                    }
                   }
                 }
               }
@@ -327,8 +267,8 @@ export default {
         },
       });
 
-      api.modifyClass("controller:composer", {
-        pluginId: "events",
+      api.modifyClass("service:composer", {
+        pluginId: "discourse-events",
 
         @discourseComputed(
           "model.action",
@@ -366,31 +306,6 @@ export default {
             this.set("lastValidatedAt", Date.now());
           }
         },
-      });
-
-      api.includePostAttributes("connected_event", "connected_event");
-
-      api.addPostClassesCallback((attrs) => {
-        if (attrs.post_number === 1 && attrs.connected_event) {
-          return ["for-event"];
-        }
-      });
-
-      api.decorateWidget("post-menu:before-extra-controls", (helper) => {
-        const post = helper.getModel();
-
-        if (post.connected_event && post.connected_event.can_manage) {
-          return helper.attach("link", {
-            attributes: {
-              target: "_blank",
-            },
-            href: post.connected_event.admin_url,
-            className: "manage-event",
-            icon: "external-link-alt",
-            label: "post.event.manage.label",
-            title: "post.event.manage.title",
-          });
-        }
       });
     });
   },

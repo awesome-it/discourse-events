@@ -9,7 +9,6 @@ fr:
     events_event_label_format: "<a href='http://momentjs.com/docs/#/displaying/format/'>Moment.js</a> format pour l'étiquette de l'événement."
     events_event_label_short_format: "Format <a href='http://momentjs.com/docs/#/displaying/format/'>Moment.js</a> pour les étiquettes d'événements de liste de sujets."
     events_event_label_short_only_start: "N'afficher que la date de début dans les étiquettes d'événements de liste de sujets."
-    events_event_label_short_after_title: "Insérez l'étiquette de l'événement après le titre de la rubrique dans la liste des rubriques."
     events_event_time_calendar_format: "<a href='http://momentjs.com/docs/#/displaying/format/'>Moment.js</a> format de l'heure dans l'entrée du calendrier."
     events_remove_past_from_map: "Supprimez les événements passés de la liste des sujets de carte dans le <a href='https://github.com/angusmcleod/discourse-locations'>plug-in locations</a>."
     events_remove_past_from_agenda: "Supprimer les événements passés de l'ordre du jour."
@@ -26,8 +25,6 @@ fr:
     events_timezone_include_in_email: "Ajouter un fuseau horaire aux étiquettes d'événements dans les courriels."
     events_timezone_format: "Format <a href='https://momentjs.com/docs/#/displaying/format/'>Moment.js</a> pour les fuseaux horaires ajoutés aux étiquettes des événements. Remplace le réglage du format Rails."
     events_timezone_rails_format: "Utilisez le format <a href='http://api.rubyonrails.org/classes/ActiveSupport/TimeZone.html'>Rails</a> pour les fuseaux horaires ajoutés aux étiquettes d’événement."
-    events_hamburger_menu_calendar_link: "Ajoutez un lien au calendrier du site dans le menu des hamburgers."
-    events_hamburger_menu_agenda_link: "Ajoutez un lien vers l'agenda du site au menu des hamburgers."
     events_min_trust_to_create: "Min confiance pour créer un événement."
     events_rsvp: "Activer l'événement RSVP."
   rss_description:

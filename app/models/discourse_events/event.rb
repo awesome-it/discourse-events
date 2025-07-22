@@ -2,19 +2,92 @@
 
 module DiscourseEvents
   class Event < ActiveRecord::Base
-    self.table_name = 'discourse_events_events'
+    self.table_name = "discourse_events_events"
+    self.ignored_columns += %i[uid source_id provider_id]
 
-    has_many :event_connections, foreign_key: 'event_id', class_name: 'DiscourseEvents::EventConnection', dependent: :destroy
-    has_many :connections, through: :event_connections, source: :connection
-    has_many :topics, through: :event_connections
+    has_many :event_topics,
+             foreign_key: "event_id",
+             class_name: "DiscourseEvents::EventTopic",
+             dependent: :destroy
+    has_many :topics, through: :event_topics
 
-    has_many :series_events, primary_key: "series_id", foreign_key: 'series_id', class_name: 'DiscourseEvents::EventConnection'
-    has_many :series_events_topics, through: :series_events, source: :topic
+    has_many :event_sources,
+             foreign_key: "event_id",
+             class_name: "DiscourseEvents::EventSource",
+             dependent: :destroy
+    has_many :sources, through: :event_sources, source: :source
 
-    belongs_to :source, foreign_key: 'source_id', class_name: 'DiscourseEvents::Source'
-    belongs_to :provider, foreign_key: 'provider_id', class_name: 'DiscourseEvents::Provider'
+    has_many :series_events,
+             primary_key: "series_id",
+             foreign_key: "series_id",
+             class_name: "DiscourseEvents::EventTopic"
+    has_many :series_topics, through: :series_events, source: :topic
 
-    validates :status, inclusion: { in: %w(draft published cancelled), message: "%{value} is not a valid event status" }
+    has_many :registrations,
+             foreign_key: "event_id",
+             class_name: "DiscourseEvents::EventRegistration",
+             dependent: :destroy
+
+    PAST_SERIES_EVENTS_SQL = (<<~SQL)
+      DISTINCT ON (series_id) *
+      FROM discourse_events_events
+      WHERE series_id IS NOT NULL AND start_time < NOW()
+      ORDER BY series_id, start_time DESC
+    SQL
+
+    FUTURE_SERIES_EVENTS_SQL = (<<~SQL)
+      DISTINCT ON (series_id) *
+      FROM discourse_events_events
+      WHERE series_id IS NOT NULL AND start_time > NOW()
+      ORDER BY series_id, start_time ASC
+    SQL
+
+    CURRENT_SERIES_EVENTS_SQL = (<<~SQL)
+      DISTINCT ON (series_id) * FROM (
+        (SELECT #{FUTURE_SERIES_EVENTS_SQL})
+        UNION
+        (SELECT #{PAST_SERIES_EVENTS_SQL})
+      ) current_series_events
+      ORDER BY series_id, start_time DESC
+    SQL
+
+    ONE_EVENT_PER_SERIES_SQL = (<<~SQL)
+      (SELECT #{CURRENT_SERIES_EVENTS_SQL})
+      UNION
+      (SELECT * FROM discourse_events_events WHERE series_id IS NULL)
+    SQL
+
+    def featured_url
+      url
+    end
+
+    def self.events_sql
+      if SiteSetting.events_one_event_per_series
+        ONE_EVENT_PER_SERIES_SQL
+      else
+        "SELECT * FROM discourse_events_events"
+      end
+    end
+
+    def self.list_sql(filter_sql: "")
+      (<<~SQL)
+        SELECT e.id,
+               e.start_time,
+               e.name,
+               e.series_id, 
+               e.url,
+               e.video_url,
+               array_remove(array_agg(et.topic_id), NULL) AS topic_ids,
+               es.source_id,
+               s.provider_id
+        FROM (#{events_sql}) AS e
+        LEFT JOIN discourse_events_event_topics et ON et.event_id = e.id
+        LEFT JOIN discourse_events_event_sources es ON es.event_id = e.id
+        LEFT JOIN discourse_events_sources s ON s.id = es.source_id
+        #{filter_sql}
+        GROUP BY e.id, e.start_time, e.name, e.series_id, e.url, e.video_url, es.source_id, s.provider_id
+      SQL
+    end
   end
 end
 
@@ -23,7 +96,6 @@ end
 # Table name: discourse_events_events
 #
 #  id            :bigint           not null, primary key
-#  uid           :string           not null
 #  start_time    :datetime         not null
 #  end_time      :datetime
 #  name          :string
@@ -31,18 +103,11 @@ end
 #  status        :string           default("published")
 #  taxonomy      :string
 #  url           :string
-#  source_id     :bigint
-#  provider_id   :bigint
-#  created_at    :datetime         not null
-#  updated_at    :datetime         not null
 #  series_id     :string
 #  occurrence_id :string
-#
-# Indexes
-#
-#  index_discourse_events_events_on_provider_id  (provider_id)
-#  index_discourse_events_events_on_source_id    (source_id)
-#  event_id_index                                (uid,provider_id) UNIQUE
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
+#  video_url     :string
 #
 # Foreign Keys
 #

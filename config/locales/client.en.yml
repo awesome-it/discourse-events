@@ -11,14 +11,20 @@ en:
       event_clear: Clear
       end_enabled: "Event end"
       all_day: "All day"
+      deadline:
+        label: "Is a deadline"
+        title: "Will show countdown in Topic and Topic List"
       timezone: "Timezone"
       no_timezone: "Select a timezone"
       rsvp_enabled: "Rsvp enabled"
       rsvp_enabled_label: "Rsvp"
-      going: "Guests"
-      going_max: "Maximum guests"
-      going_max_label: "{{goingMax}} Guests"
+      going: "Attendees"
+      going_max: "Maximum attendees"
+      going_max_label: "{{goingMax}} attendees"
       error: "Event end should be same as or after event start"
+    event_label:
+      deadline:
+        past_due: "Past Due"
     category:
       events_setting_heading: "Events"
       enable_events: "Allow events to be added to topics in this category."
@@ -64,6 +70,10 @@ en:
       events_calendar:
         label: "Calendar"
         first_day_week: "Start week on"
+    topic:
+      event:
+        video:
+          label: "Join"
 
     webcal_preferences:
       webcal_keys: "Webcal Keys"
@@ -73,23 +83,26 @@ en:
       generate: "Generate"
       notice: "The key and client id will be visible only once. Please store them in a safe place before you leave this page."
       calendar_notice: "Generate Webcal API keys in order to subscribe to the ical feed."
-      calendar_usage: "Documentation on how to use Webcal API keys."
 
     event_rsvp:
-      modal:
-        title: "Guests"
+      attendees:
+        title: "Attendees"
         filter: "Filter"
+      rsvp:
+        label: RSVP
+        none: Your rsvp
       going:
-        label: "Going"
-        max_reached: "Booked out"
-        one_spot_left: "1 spot left"
-        x_spots_left: "{{spotsLeft}} spots left"
-
-    post:
-      event:
-        manage:
-          label: Manage Event
-          title: Manage event on event provider.
+        label: Going
+        user_label: You're going
+      not_going:
+        label: Not Going
+        user_label: You're not going
+      maybe_going:
+        label: Maybe Going
+        user_label: You're maybe going
+      invited:
+        label: Invited
+        user_label: You're invited
 
     site_settings:
       events_timezone_default_placeholder: "Select a Timezone"
@@ -103,42 +116,107 @@ en:
       events:
         title: Events
         actions: Actions
-        beta_notice: "These features are currently in beta. We'll soon be launching subscription plans for the Events Plugin, which will apply to some of these features. <a href='https://pavilion.tech/products/discourse-events-plugin'>Find out more</a>."
         source:
           title: Sources
           none: No sources.
+          label: Source
           add:
-            label: Add
+            label: Add Source
             title: Add Source
           remove:
             label: Remove
             title: Remove Source
-            confirm: Are you sure you want to remove '%{source_name}'? Removing a source removes all associated events and connections.
+            confirm: Are you sure you want to remove this source? Removing a source does not remove its events.
           name:
             label: Name
             placeholder: underscored
           provider:
             label: Provider
-            select: Select a provider...
+            instructions: Service providing events.
           save:
             label: Save
             title: Save Source
           source_options:
-            label: Options
-            none: No options
-          date_range: Date Range
+            uri: URI
+            organization_id: Organization ID
+            group_urlname: Group Urlname
+            user_id: User ID
+            calendar_id: Calendar ID
+          import_type:
+            label: Import Type
+            title: The way events are imported and published.
+            instructions: How events are imported and published.
+            import:
+              label: Import only
+              instructions: Only import events.
+            import_publish:
+              label: Import and Publish
+              instructions: Import events, and publish new events posted in the Category.
+            publish:
+              label: Publish only
+              instructions: Only publish events from the Category.
+          import_period:
+            label: Import Schedule
+            instructions: How often events are imported.
+            none: Manual
+            5_minutes: Every 5 Minutes
+            30_minutes: Every 30 Minutes
+            1_hour: Every Hour
+            1_day: Every Day
+            1_week: Every Week
           import:
-            label: Import
-            title: Import Source
+            label: Import Events
+            title: Import events from source.
+          client:
+            label: Plugin
+            instructions: Plugin used to post events.
+            discourse_events: Discourse Events
+            discourse_calendar: Discourse Calendar
+          category:
+            label: Category
+            instructions: Category where events are posted and published.
+          user:
+            label: User
+            instructions: User who posts imported events.
+          topics:
+            label: Topics
+          topic_sync:
+            label: Sync
+            title: How to create and update topics for events from this source.
+            instructions: How topics are created and updated from events.
+            manual:
+              label: Manual
+              instructions: Manually sync events to topics.
+            auto:
+              label: Automatic
+              instructions: Events are synced with topics after they're imported.
+          topic_sync_all:
+            label: Sync Events
+            title: Sync all events from this source with topics in the Category.
+          filters:
+            label: Import Filters
+            instructions: Filters applied to event imports.
+
         provider:
           title: Providers
+          label: Provider
           none: No providers.
           add:
             label: Add
             title: Add Provider
-          status: Status
-          ready: Ready
-          not_ready: Not Ready
+          status:
+            ready:
+              label: Ready
+              title: Provider is ready.
+            not_ready:
+              label: Not Ready
+              title: Provider is not ready.
+            authenticated: 
+              label: Authenticated
+              title: Provider is authenticated.
+            not_authenticated:
+              label: Not Authenticated
+              title: Provider is not authenticated.
           name:
             label: Name
             placeholder: underscored
@@ -148,83 +226,115 @@ en:
           provider_type:
             label: Type
             select: Select a type...
+            icalendar:
+              label: iCalendar
+              description: Import events from any calendar with an iCal feed.
+            eventbrite:
+              label: Eventbrite
+            eventzilla:
+              label: Eventzilla
+            meetup:
+              label: Meetup
+            outlook:
+              label: Outlook Calendar
+              description: Import and publish events from Outlook Calendar.
+            humanitix:
+              label: Humanitix
+            google:
+              label: Google Calendar
+              description: Import and publish events from Google Calendar.
           method: Method
-          credentials: Credentials
-          no_credentials: No Credentials
-          username: Username
-          password: Password
-          token: Token
-          client_id: Client ID
-          client_secret: Client Secret
+          authentication:
+            label: Authentication
+            none: No Authentication
+          credentials:
+            username: Username
+            password: Password
+            token: Token
+            client_id: Client ID
+            client_secret: Client Secret
           save:
             label: Save
             title: Save Provider
           remove:
             label: Remove
             title: Remove Provider
-            confirm: Are you sure you want to remove '%{provider_name}'? Removing a provider removes associated sources.
+            confirm: Are you sure you want to remove '%{provider_name}'? Removing a provider removes its sources.
           authenticate:
             label: Authenticate
             title: Authenticate Provider
-        connection:
-          title: Connections
-          none: No connections.
+        filters:
+          label: Filters
+          set: 
+            label: Set Filters
+            title: Set filters.
           add:
             label: Add
-            title: Add Connection
+            title: Add a filter.
+          done:
+            label: Done
+            title: Finished setting filters.
+        filter:
+          query_column:
+            label: Attribute
+          query_operator:
+            label: Operator
+          query_value:
+            label: Value
           remove:
-            label: Remove
-            title: Remove Connection
-            confirm: Are you sure you want to remove this connection?
-          save:
-            label: Save
-            title: Save Connection
-          user: User
-          category: Category
-          source: Source
-          client:
-            label: Client
-            select: Select...
-          source:
-            label: Source
-            select: Select...
-          sync:
-            label: Sync
-            title: Sync Connection
-          filters:
-            title: Connection Filters
-            label: Filters
-            add:
-              label: Add
-              title: Add a filter
-            done:
-              label: Done
-              title: Close filters
-          filter:
-            query_column:
-              select: Select an attribute...
-            query_value: Enter a value
-            remove:
-              title: Remove filter
+            title: Remove filter
 
         event:
           title: Events
-          select_all: Select All
+          select_all: Select all
+          selected_x:
+            one: "%{count} event selected"
+            other: "%{count} events selected"
           show_select: Show event select
           start_time: Start Time
           name: Name
           source: Source
           topics: Topics
-          none: No events.
+          none:
+            connected: No events connected to topics.
+            unconnected: No events not connected topics.
+          connected:
+            label: Connected
+            label_with_count:
+              one: "Connected (%{count})"
+              other: "Connected (%{count})"
+            title: Events connected to topics.
+          unconnected:
+            label: Unconnected
+            label_with_count:
+              one: "Unconnnected (%{count})"
+              other: "Unconnected (%{count})"
+            title: Events not connected to topics.
           delete:
-            title: Delete Events and Topics
+            title: Delete Events
             label: Delete
+            description_x:
+              one: One event selected.
+              other: "%{count} events selected."
             events_only: Delete events only
-            events_and_topics: Delete events and associated topics
+            events_and_topics: Delete events and topics
             topics_only: Delete topics only
             events_only_btn: Delete Events
             events_and_topics_btn: Delete Events and Topics
             topics_only_btn: Delete Topics
+          connect:
+            title: Connect Topic
+            label: Connect
+            event: Event
+            user: User
+            category: Category
+            create_topic: Create a topic.
+            connect_topic: Connect a topic.
+            client: Plugin
+          update:
+            title: Update Topic
+          series:
+            label: Series
         log:
           title: Logs
           created_at: Created At
@@ -233,18 +343,63 @@ en:
           message: Message
           none: No logs.
         message:
-          documentation: "Check out the documentation"
-          connection:
-            info: "Connections are where you show your events"
-            sync_started: "Sync started. Check the result in the <a href='/admin/events/log'>Logs</a>."
-            sync_failed_to_start: "Sync failed to start."
+          documentation: "Check out the documentation"            
           source:
-            info: "Sources are how you import events from a provider"
-            import_started: "Import started. Check the result in the <a href='/admin/events/log'>Logs</a>."
-            import_failed_to_start: "Import failed to start."
+            info: "Import events, sync topics, and publish events."
+            event_import_started: "Event import started. Check the result in the <a href='/admin/plugins/events/log'>Logs</a>."
+            event_import_failed_to_start: "Event import failed to start."
+            topic_creation_started: "Topic creation started. Check the result in the <a href='/admin/plugins/events/log'>Logs</a>."
+            topic_creation_failed_to_start: "Topic creation failed to start."
           event:
-            info: "The events you've imported"
+            connected:
+              info: "Events connected to topics."
+            unconnected:
+              info: "Events not connected to topics."
           provider:
-            info: "Providers are the services providing your events"
+            info: "Services providing your events."
           log:
             info: "The logs of your events"
+
+        subscription:
+          authorize:
+            label: Authorize
+            title: Authorize a subscription.
+          deauthorize:
+            label: Deauthorize
+            title: Deauthorize the current subscription.
+          update:
+            title: "Update subscription status"
+          upgrade:
+            label: Upgrade
+            title: Upgrade your subscription to use this feature.
+          type:
+            none:
+              label: Subscribe
+              title: There is no Events subscription active on this forum.
+            business:
+              label: Subscribed
+              title: There is an Events Business subscription active on this forum.
+            community:
+              label: Subscribed
+              title: There is an Events Community subscription active on this forum.
+            enterprise:
+              label: Subscribed
+              title: There is an Events Enterprise subscription active on this forum.
+          subscribed:
+            label: Subscribed
+            title: You're subscribed and can use these features
+            selector: subscribed
+          not_subscribed:
+            label: Not Subscribed
+            title: Subscribe to use these features
+            selector: not subscribed
+          tags:
+            community:
+              label: Community
+              title: Available on a community subscription.
+            business:
+              label: Business
+              title: Available on a business subscription.
+            enterprise:
+              label: Enterprise
+              title: Available on an enterprise subscription.

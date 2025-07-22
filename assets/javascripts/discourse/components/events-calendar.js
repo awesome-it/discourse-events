@@ -1,19 +1,20 @@
+import Component from "@ember/component";
+import { alias, not, or } from "@ember/object/computed";
+import { scheduleOnce } from "@ember/runloop";
+import { service } from "@ember/service";
+import Category from "discourse/models/category";
 import {
+  bind,
   default as discourseComputed,
   observes,
   on,
 } from "discourse-common/utils/decorators";
+import I18n from "I18n";
 import {
   calendarDays,
   calendarRange,
   eventsForDay,
 } from "../lib/date-utilities";
-import { alias, not, or } from "@ember/object/computed";
-import Category from "discourse/models/category";
-import Component from "@ember/component";
-import { bind, scheduleOnce } from "@ember/runloop";
-import { inject as service } from "@ember/service";
-import I18n from "I18n";
 
 const RESPONSIVE_BREAKPOINT = 800;
 const YEARS = [
@@ -26,24 +27,17 @@ export default Component.extend({
   classNameBindings: [":events-calendar", "responsive"],
   showEvents: not("eventsBelow"),
   canSelectDate: alias("eventsBelow"),
-  routing: service("-routing"),
-  queryParams: alias(
-    "routing.router.currentState.routerJsState.fullQueryParams"
-  ),
+  router: service(),
+  queryParams: alias("router.currentRoute.queryParams"),
   years: YEARS.map((y) => ({ id: y, name: y })),
   layoutName: "components/events-calendar",
-  webcalDocumentationURL: "https://coop.pavilion.tech/t/1447",
 
   @on("init")
   setup() {
     this._super();
     moment.locale(I18n.locale);
 
-    scheduleOnce("afterRender", () => {
-      this.handleResize();
-      $(window).on("resize", bind(this, this.handleResize));
-      $("body").addClass("calendar");
-    });
+    scheduleOnce("afterRender", this, this.positionCalendar);
 
     let currentDate = moment().date();
     let currentMonth = moment().month();
@@ -78,6 +72,11 @@ export default Component.extend({
     this.setProperties({ currentDate, currentMonth, currentYear, month, year });
   },
 
+  positionCalendar() {
+    this.handleResize();
+    window.addEventListener("resize", this.handleResize, false);
+  },
+
   @discourseComputed("siteSettings.login_required", "category.read_restricted")
   showNotice(loginRequired, categoryRestricted) {
     return loginRequired || categoryRestricted;
@@ -85,15 +84,15 @@ export default Component.extend({
 
   @on("willDestroy")
   teardown() {
-    $(window).off("resize", bind(this, this.handleResize));
-    $("body").removeClass("calendar");
+    window.removeEventListener("resize", this.handleResize);
   },
 
+  @bind
   handleResize() {
     if (this._state === "destroying") {
       return;
     }
-    this.set("responsiveBreak", $(window).width() < RESPONSIVE_BREAKPOINT);
+    this.set("responsiveBreak", window.innerWidth < RESPONSIVE_BREAKPOINT);
   },
 
   forceResponsive: false,
@@ -135,14 +134,14 @@ export default Component.extend({
     return days;
   },
 
-  @discourseComputed("category")
+  @discourseComputed()
   showSubscription() {
-    return true; // !category || !category.read_restricted;
+    return !this.site.mobileView;
   },
 
   transitionToMonth(month, year) {
     const { start, end } = calendarRange(month, year);
-    const router = this.get("routing.router");
+    const router = this.get("router");
 
     if (this.get("loading")) {
       return;
