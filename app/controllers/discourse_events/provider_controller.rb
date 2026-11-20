@@ -24,7 +24,7 @@ module DiscourseEvents
       if provider.errors.blank?
         render_serialized(provider, ProviderSerializer, root: "provider")
       else
-        render json: failed_json.merge(errors: provider.errors.full_messages), status: 400
+        render json: failed_json.merge(errors: provider.errors.full_messages), status: :bad_request
       end
     end
 
@@ -34,7 +34,7 @@ module DiscourseEvents
       if provider.errors.blank?
         render_serialized(provider, ProviderSerializer, root: "provider")
       else
-        render json: failed_json.merge(errors: provider.errors.full_messages), status: 400
+        render json: failed_json.merge(errors: provider.errors.full_messages), status: :bad_request
       end
     end
 
@@ -87,11 +87,6 @@ module DiscourseEvents
           :client_id,
           :client_secret,
         )
-
-      unless subscription_manager.supports?(:provider, :provider_type, result[:provider_type])
-        raise Discourse::InvalidParameters,
-              "provider #{result[:provider_type]} not supported by your subscription"
-      end
 
       result
     end

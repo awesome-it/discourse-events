@@ -1,20 +1,12 @@
 import { visit } from "@ember/test-helpers";
 import { test } from "qunit";
-import {
-  acceptance,
-  exists,
-  query,
-} from "discourse/tests/helpers/qunit-helpers";
+import { acceptance, query } from "discourse/tests/helpers/qunit-helpers";
 import { default as Subscriptions } from "../fixtures/subscription-fixtures";
-import { default as Suppliers } from "../fixtures/supplier-fixtures";
 
 function sourceRoutes(needs) {
   needs.pretender((server, helper) => {
     server.get("/admin/plugins/events/subscription", () => {
-      return helper.response(Subscriptions["business"]);
-    });
-    server.get("/admin/plugins/subscription-client/suppliers", () => {
-      return helper.response(Suppliers["authorized"]);
+      return helper.response(Subscriptions);
     });
     server.get("/admin/plugins/events", () => {
       return helper.response({});
@@ -73,9 +65,9 @@ acceptance("Events | Event", function (needs) {
   test("Displays the event admin", async (assert) => {
     await visit("/admin/plugins/events/event");
 
-    assert.ok(exists(".events.event"), "it shows the event route");
+    assert.dom(".events.event").exists("it shows the event route");
 
-    assert.equal(
+    assert.strictEqual(
       query(".events-event-row .name").innerText.trim(),
       "La Traviata",
       "Name displayed"

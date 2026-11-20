@@ -1,15 +1,16 @@
+/* eslint-disable ember/no-actions-hash, ember/no-classic-classes, ember/no-classic-components, ember/require-tagless-components */
 import Component from "@ember/component";
 import { alias, not, or } from "@ember/object/computed";
 import { scheduleOnce } from "@ember/runloop";
 import { service } from "@ember/service";
-import Category from "discourse/models/category";
 import {
   bind,
   default as discourseComputed,
   observes,
   on,
-} from "discourse-common/utils/decorators";
-import I18n from "I18n";
+} from "discourse/lib/decorators";
+import Category from "discourse/models/category";
+import I18n from "discourse-i18n";
 import {
   calendarDays,
   calendarRange,
@@ -148,37 +149,42 @@ export default Component.extend({
     }
     this.set("loading", true);
 
-    return router
-      .transitionTo({
-        queryParams: { start, end },
-      })
-      .then(() => {
-        const category = this.get("category");
-        let filter = "";
+    const category = this.get("category");
+    const queryParams = { queryParams: { start, end } };
+    const transitionPromise = category
+      ? router.transitionTo(
+          "discovery.calendarCategory",
+          `${Category.slugFor(category)}/${category.id}`,
+          queryParams
+        )
+      : router.transitionTo("discovery.calendar", queryParams);
 
-        if (category) {
-          filter += `c/${Category.slugFor(category)}/l/`;
-        }
-        filter += "calendar";
+    return transitionPromise.then(() => {
+      let filter = "";
 
-        this.store
-          .findFiltered("topicList", {
-            filter,
-            params: { start, end },
-          })
-          .then((list) => {
-            if (this._state === "destroying") {
-              return;
-            }
+      if (category) {
+        filter += `c/${Category.slugFor(category)}/l/`;
+      }
+      filter += "calendar";
 
-            this.setProperties({
-              topics: list.topics,
-              currentMonth: month,
-              currentYear: year,
-              loading: false,
-            });
+      this.store
+        .findFiltered("topicList", {
+          filter,
+          params: { start, end },
+        })
+        .then((list) => {
+          if (this._state === "destroying") {
+            return;
+          }
+
+          this.setProperties({
+            topics: list.topics,
+            currentMonth: month,
+            currentYear: year,
+            loading: false,
           });
-      });
+        });
+    });
   },
 
   @observes("month", "year")
